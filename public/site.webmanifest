@@ -1,0 +1,22 @@
+{
+  "name": "OmniVeil Security",
+  "short_name": "OmniVeil",
+  "description": "Professional CCTV and surveillance systems for homes and businesses across Nairobi, Kenya.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c17",
+  "theme_color": "#080c17",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

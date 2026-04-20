@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 90 90">
+  <defs>
+    <radialGradient id="nlg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="90" height="90" fill="#080c17"/>
+  <circle cx="45" cy="45" r="42" fill="url(#nlg)"/>
+  <polygon points="45,5 80,25 80,65 45,85 10,65 10,25" stroke="#00e5ff" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <circle cx="45" cy="45" r="28" fill="#001522"/>
+  <circle cx="45" cy="45" r="28" stroke="#00e5ff" stroke-width="2" fill="none" opacity="0.9"/>
+  <circle cx="45" cy="45" r="8" fill="#00e5ff"/>
+  <circle cx="45" cy="45" r="3.5" fill="#ffffff"/>
+  <line x1="17" y1="45" x2="30" y2="45" stroke="#00e5ff" stroke-width="1.4" opacity="0.7"/>
+  <line x1="60" y1="45" x2="73" y2="45" stroke="#00e5ff" stroke-width="1.4" opacity="0.7"/>
+  <line x1="45" y1="17" x2="45" y2="30" stroke="#00e5ff" stroke-width="1.4" opacity="0.7"/>
+  <line x1="45" y1="60" x2="45" y2="73" stroke="#00e5ff" stroke-width="1.4" opacity="0.7"/>
+</svg>
