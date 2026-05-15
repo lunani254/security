@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   formatKES,
-  INSTALLATION_FEE,
+  installationBreakdown,
   WHATSAPP_NUMBERS,
 } from '@/data/products'
 
@@ -16,15 +16,12 @@ const INITIAL_FORM = {
 }
 
 export default function OrderForm({ product, onClose }) {
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [form,   setForm]   = useState(INITIAL_FORM)
   const [errors, setErrors] = useState({})
 
-  // Close on Escape + lock body scroll
   useEffect(() => {
     if (!product) return
-    const handler = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     document.body.style.overflow = 'hidden'
     return () => {
@@ -39,22 +36,27 @@ export default function OrderForm({ product, onClose }) {
   }, [])
 
   const quote = useMemo(() => {
-    if (!product) return { subtotal: 0, install: 0, total: 0 }
-    const qty = Number(form.qty) || 0
-    const subtotal = product.price * qty
-    const install = form.installation ? INSTALLATION_FEE : 0
-    return { subtotal, install, total: subtotal + install }
+    if (!product) return { subtotal: 0, installCost: 0, total: 0, bd: null }
+    const qty         = Math.max(1, Number(form.qty) || 1)
+    const subtotal    = product.price * qty
+    const bd          = installationBreakdown(qty, product)
+    const installCost = form.installation ? bd.total : 0
+    return { subtotal, installCost, total: subtotal + installCost, bd }
   }, [product, form.qty, form.installation])
 
   if (!product) return null
 
+  const qty = Math.max(1, Number(form.qty) || 1)
+  const { bd } = quote
+
   const validate = () => {
     const next = {}
-    if (!form.name.trim()) next.name = 'Required'
-    if (!form.phone.trim()) next.phone = 'Required'
-    else if (!/^[+\d][\d\s]{7,}$/.test(form.phone.trim())) next.phone = 'Enter a valid phone number'
+    if (!form.name.trim())     next.name     = 'Required'
+    if (!form.phone.trim())    next.phone    = 'Required'
+    else if (!/^[+\d][\d\s]{7,}$/.test(form.phone.trim()))
+      next.phone = 'Enter a valid phone number'
     if (!form.location.trim()) next.location = 'Required'
-    if (form.qty < 1) next.qty = 'Must be at least 1'
+    if (qty < 1)               next.qty      = 'Must be at least 1'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -66,19 +68,33 @@ export default function OrderForm({ product, onClose }) {
       'I would like a quote for the following:',
       '',
       `Product: ${product.name} (${product.code})`,
-      `Quantity: ${form.qty}`,
+      `Quantity: ${qty} camera${qty > 1 ? 's' : ''}`,
       `Unit price: ${formatKES(product.price)}`,
-      `Installation: ${form.installation ? `Yes (${formatKES(INSTALLATION_FEE)})` : 'No, delivery only'}`,
+      `Camera subtotal: ${formatKES(quote.subtotal)}`,
+    ]
+    if (form.installation && bd) {
+      lines.push(
+        '',
+        'Installation requested:',
+        `  Complexity: ${bd.complexity}`,
+        `  First camera (base fee): ${formatKES(bd.base)}`,
+      )
+      if (qty > 1)
+        lines.push(`  Additional (${qty - 1} x ${formatKES(bd.extra)}): ${formatKES(bd.extras)}`)
+      lines.push(`  Installation total: ${formatKES(bd.total)}`)
+    } else {
+      lines.push('Installation: Not required, delivery only')
+    }
+    lines.push(
+      '',
       `Estimated total: ${formatKES(quote.total)}`,
       '',
       'My details:',
       `Name: ${form.name}`,
       `Phone: ${form.phone}`,
       `Location: ${form.location}`,
-    ]
-    if (form.notes.trim()) {
-      lines.push('', `Notes: ${form.notes.trim()}`)
-    }
+    )
+    if (form.notes.trim()) lines.push('', `Notes: ${form.notes.trim()}`)
     lines.push('', 'Sent from the OmniVeil Security website.')
     return lines.join('\n')
   }
@@ -86,8 +102,7 @@ export default function OrderForm({ product, onClose }) {
   const openWhatsApp = (number) => {
     if (!validate()) return
     const text = encodeURIComponent(buildQuoteMessage())
-    const url = `https://wa.me/${number}?text=${text}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    window.open(`https://wa.me/${number}?text=${text}`, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -97,7 +112,6 @@ export default function OrderForm({ product, onClose }) {
       aria-modal="true"
       aria-labelledby="order-form-title"
     >
-      {/* Backdrop */}
       <button
         type="button"
         aria-label="Close order form"
@@ -105,7 +119,6 @@ export default function OrderForm({ product, onClose }) {
         className="absolute inset-0 bg-[rgba(4,7,14,0.82)] backdrop-blur-sm"
       />
 
-      {/* Panel */}
       <div className="relative z-10 w-full max-w-2xl bg-[#0b111e] border border-[rgba(0,229,255,0.18)] shadow-[0_0_60px_rgba(0,229,255,0.06)] max-h-[92vh] overflow-y-auto">
         <CornerBrackets />
 
@@ -132,6 +145,7 @@ export default function OrderForm({ product, onClose }) {
         </div>
 
         <div className="p-6 space-y-6">
+
           {/* Product row */}
           <div className="flex items-center gap-4 p-4 bg-[rgba(0,229,255,0.03)] border border-[rgba(0,229,255,0.08)]">
             <img
@@ -150,13 +164,13 @@ export default function OrderForm({ product, onClose }) {
             </div>
           </div>
 
-          {/* Qty + Installation */}
+          {/* Qty + Installation — original side by side layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Quantity" error={errors.qty}>
               <div className="flex">
                 <button
                   type="button"
-                  onClick={() => update('qty', Math.max(1, Number(form.qty) - 1))}
+                  onClick={() => update('qty', Math.max(1, qty - 1))}
                   className="w-10 border border-[rgba(0,229,255,0.2)] text-[#00e5ff] hover:bg-[rgba(0,229,255,0.06)] transition-colors"
                   aria-label="Decrease quantity"
                 >
@@ -171,7 +185,7 @@ export default function OrderForm({ product, onClose }) {
                 />
                 <button
                   type="button"
-                  onClick={() => update('qty', Number(form.qty) + 1)}
+                  onClick={() => update('qty', qty + 1)}
                   className="w-10 border border-[rgba(0,229,255,0.2)] text-[#00e5ff] hover:bg-[rgba(0,229,255,0.06)] transition-colors"
                   aria-label="Increase quantity"
                 >
@@ -207,6 +221,41 @@ export default function OrderForm({ product, onClose }) {
               </div>
             </Field>
           </div>
+
+          {/* Installation breakdown — only shown when installation selected */}
+          {form.installation && bd && (
+            <div className="border border-[rgba(0,229,255,0.12)] bg-[rgba(0,229,255,0.02)] p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[9px] tracking-[4px] text-[#00e5ff] uppercase font-mono">
+                  Installation Breakdown
+                </div>
+                <div className="text-[9px] font-mono text-gray-500 tracking-widest">
+                  {bd.complexity}
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">First camera (base fee)</span>
+                  <span className="font-mono text-gray-200">{formatKES(bd.base)}</span>
+                </div>
+                {qty > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">
+                      {qty - 1} more camera{qty - 1 > 1 ? 's' : ''} × {formatKES(bd.extra)}
+                    </span>
+                    <span className="font-mono text-gray-200">{formatKES(bd.extras)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold pt-2 border-t border-[rgba(0,229,255,0.08)]">
+                  <span className="text-white">Installation total</span>
+                  <span className="font-mono text-[#00e5ff] text-base">{formatKES(bd.total)}</span>
+                </div>
+              </div>
+              <p className="text-[9px] text-gray-600 font-mono leading-relaxed">
+                Final cost confirmed after site visit. Difficult access or long cable runs may affect price.
+              </p>
+            </div>
+          )}
 
           {/* Name + Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -257,12 +306,12 @@ export default function OrderForm({ product, onClose }) {
             </div>
             <div className="px-5 py-4 space-y-2 text-sm">
               <QuoteRow
-                label={`${product.name} x ${form.qty}`}
+                label={`${product.name} x ${qty}`}
                 value={formatKES(quote.subtotal)}
               />
               <QuoteRow
                 label="Installation"
-                value={form.installation ? formatKES(quote.install) : 'Not included'}
+                value={form.installation ? formatKES(quote.installCost) : 'Not included'}
                 muted={!form.installation}
               />
               <div className="h-px bg-[rgba(0,229,255,0.08)] my-2" />
@@ -294,7 +343,6 @@ export default function OrderForm({ product, onClose }) {
                 </button>
               ))}
             </div>
-
             <button
               type="button"
               onClick={onClose}
@@ -330,9 +378,7 @@ function QuoteRow({ label, value, muted }) {
   return (
     <div className="flex items-center justify-between">
       <span className={`${muted ? 'text-gray-600' : 'text-gray-400'} text-sm`}>{label}</span>
-      <span className={`${muted ? 'text-gray-600' : 'text-gray-200'} font-mono text-sm`}>
-        {value}
-      </span>
+      <span className={`${muted ? 'text-gray-600' : 'text-gray-200'} font-mono text-sm`}>{value}</span>
     </div>
   )
 }

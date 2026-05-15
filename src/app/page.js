@@ -5,7 +5,7 @@ import Hero from '@/components/Hero'
 import Services from '@/components/Services'
 import Products from '@/components/Products'
 import WhyUs from '@/components/WhyUs'
-import CTA from '@/components/Cta'
+import CTA from '@/components/CTA'
 import Footer from '@/components/Footer'
 
 function useInView(threshold = 0.15) {

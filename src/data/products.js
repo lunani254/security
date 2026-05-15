@@ -248,7 +248,7 @@ export const PRODUCTS = [
     price: 4200,
     desc: 'The most affordable camera in the catalogue. Good HD video, basic IR, outdoor rated.',
     long:
-      'When the job is just "cover this one angle" and the budget is tight, this is the one. Don’t expect AI features, but picture quality is honest.',
+      'When the job is just cover this one angle and the budget is tight, this is the one. Do not expect AI features, but picture quality is honest.',
     specs: ['2MP', 'IR 20m', 'IP66', 'PoE', 'Budget Pick'],
     img: '/products/td-2mp.jpg',
   },
@@ -448,41 +448,46 @@ export const PRODUCTS = [
   },
 ]
 
-// Filter options driven off the catalogue.
+// ── FILTER OPTIONS ───────────────────────────────────────────────────────────
+
 export const CATEGORIES = [
-  { id: 'all', label: 'All Products' },
-  { id: 'bullet', label: 'Bullet' },
-  { id: 'dome', label: 'Dome' },
-  { id: 'turret', label: 'Turret' },
-  { id: 'ptz', label: 'PTZ' },
-  { id: 'cube', label: 'Cube' },
-  { id: 'wifi', label: 'WiFi' },
-  { id: '4g', label: '4G / Cellular' },
-  { id: 'solar', label: 'Solar' },
-  { id: 'battery', label: 'Battery' },
+  { id: 'all',      label: 'All Products' },
+  { id: 'bullet',   label: 'Bullet' },
+  { id: 'dome',     label: 'Dome' },
+  { id: 'turret',   label: 'Turret' },
+  { id: 'ptz',      label: 'PTZ' },
+  { id: 'cube',     label: 'Cube' },
+  { id: 'wifi',     label: 'WiFi' },
+  { id: '4g',       label: '4G / Cellular' },
+  { id: 'solar',    label: 'Solar' },
+  { id: 'battery',  label: 'Battery' },
   { id: 'colourvu', label: 'ColorVu' },
-  { id: 'ai', label: 'AI Detection' },
-  { id: 'covert', label: 'Covert' },
+  { id: 'ai',       label: 'AI Detection' },
+  { id: 'covert',   label: 'Covert' },
 ]
 
 export const ENVIRONMENTS = [
-  { id: 'indoor', label: 'Indoor' },
+  { id: 'indoor',  label: 'Indoor' },
   { id: 'outdoor', label: 'Outdoor' },
-  { id: 'hybrid', label: 'Hybrid' },
+  { id: 'hybrid',  label: 'Hybrid' },
 ]
 
 export const RESOLUTIONS = [
   { id: '2MP', label: '2MP' },
-  { id: '3K', label: '3K' },
+  { id: '3K',  label: '3K' },
   { id: '4MP', label: '4MP' },
   { id: '5MP', label: '5MP' },
   { id: '6MP', label: '6MP' },
 ]
 
-export const BRANDS = ['Hikvision', 'Uniview', 'Tiandy', 'Imou', 'Ezviz', 'LongPlus', 'U-BOX', 'OmniVeil']
+export const BRANDS = [
+  'Hikvision', 'Uniview', 'Tiandy', 'Imou', 'Ezviz', 'LongPlus', 'U-BOX', 'OmniVeil',
+]
+
+// ── UTILITIES ────────────────────────────────────────────────────────────────
 
 export function formatKES(amount) {
-  return `KES ${amount.toLocaleString('en-KE')}`
+  return `KES ${Number(amount).toLocaleString('en-KE')}`
 }
 
 export function findProductByCode(code) {
@@ -491,11 +496,69 @@ export function findProductByCode(code) {
   return PRODUCTS.find((p) => p.code.toLowerCase() === needle)
 }
 
-// Flat installation fee (adjust here, it propagates everywhere).
-export const INSTALLATION_FEE = 3500
+// ── INSTALLATION CALCULATOR ──────────────────────────────────────────────────
+// Pricing logic:
+//   - KES 3,500 covers the first camera (travel, mounting, cabling, config)
+//   - KES 1,000 for each additional camera after the first
+//   - A complexity multiplier is applied based on camera type
+//     Standard (dome/bullet/turret/cube) : 1.0x  → base 3,500  extra 1,000
+//     WiFi / Dual-lens / Covert          : 1.2x  → base 4,200  extra 1,200
+//     4G / Solar                         : 1.3x  → base 4,550  extra 1,300
+//     PTZ                                : 1.5x  → base 5,250  extra 1,500
 
-// Official OmniVeil WhatsApp numbers. Stored without '+' for wa.me URLs.
+export const INSTALL_BASE      = 3500   // first camera base fee
+export const INSTALL_PER_EXTRA = 1000   // each camera after the first
+
+export function complexityMultiplier(product) {
+  if (!product) return 1
+  const t = product.types || []
+  if (t.includes('ptz'))    return 1.5
+  if (t.includes('4g'))     return 1.3
+  if (t.includes('solar'))  return 1.3
+  if (t.includes('wifi'))   return 1.2
+  if (t.includes('dual'))   return 1.2
+  if (t.includes('covert')) return 1.2
+  return 1
+}
+
+export function complexityLabel(product) {
+  if (!product) return 'Standard'
+  const t = product.types || []
+  if (t.includes('ptz'))    return 'Complex — PTZ'
+  if (t.includes('4g'))     return 'Advanced — 4G'
+  if (t.includes('solar'))  return 'Advanced — Solar'
+  if (t.includes('wifi'))   return 'Moderate — WiFi'
+  if (t.includes('dual'))   return 'Moderate — Dual-lens'
+  if (t.includes('covert')) return 'Moderate — Covert'
+  return 'Standard'
+}
+
+// Total installation cost for a job
+export function installationTotal(qty, product) {
+  const m     = complexityMultiplier(product)
+  const base  = Math.round(INSTALL_BASE * m)
+  const extra = Math.round(INSTALL_PER_EXTRA * m)
+  return base + Math.max(0, qty - 1) * extra
+}
+
+// Full breakdown for display in the quote form
+export function installationBreakdown(qty, product) {
+  const m      = complexityMultiplier(product)
+  const base   = Math.round(INSTALL_BASE * m)
+  const extra  = Math.round(INSTALL_PER_EXTRA * m)
+  const extras = Math.max(0, qty - 1) * extra
+  return {
+    base,
+    extra,
+    extras,
+    total:      base + extras,
+    complexity: complexityLabel(product),
+  }
+}
+
+// ── WHATSAPP CONTACTS ────────────────────────────────────────────────────────
+
 export const WHATSAPP_NUMBERS = [
   { label: 'Sales Team', number: '254780741147' },
-  { label: 'Support', number: '254106871484' },
+  { label: 'Support',    number: '254106871484' },
 ]
