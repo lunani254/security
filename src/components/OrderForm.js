@@ -103,45 +103,41 @@ export default function OrderForm({ product, onClose }) {
   }
 
   const sendEmail = async () => {
-    if (!validate(true)) return
-    setSending(true)
-    setSendError('')
-    try {
-      const res = await fetch('/api/quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name:              form.name,
-          phone:             form.phone,
-          location:          form.location,
-          notes:             form.notes,
-          customerEmail:     form.email,
-          productName:       product.name,
-          productCode:       product.code,
-          productPrice:      product.price,
-          qty,
-          installation:      form.installation,
-          installBase:       bd?.base       ?? 0,
-          installExtra:      bd?.extra      ?? 0,
-          installExtras:     bd?.extras     ?? 0,
-          installTotal:      bd?.total      ?? 0,
-          installComplexity: bd?.complexity ?? 'Standard',
-          subtotal:          quote.subtotal,
-          total:             quote.total,
-        }),
-      })
-      const data = await res.json()
-      if (data.ok) {
-        setSent(true)
-      } else {
-        setSendError('Email failed. Please try WhatsApp instead.')
-      }
-    } catch {
-      setSendError('Email failed. Please try WhatsApp instead.')
-    } finally {
-      setSending(false)
-    }
+  if (!validate(true)) return
+  setSending(true)
+  setSendError('')
+  try {
+    fetch('/api/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:              form.name,
+        phone:             form.phone,
+        location:          form.location,
+        notes:             form.notes,
+        customerEmail:     form.email,
+        productName:       product.name,
+        productCode:       product.code,
+        productPrice:      product.price,
+        qty,
+        installation:      form.installation,
+        installBase:       bd?.base       ?? 0,
+        installExtra:      bd?.extra      ?? 0,
+        installExtras:     bd?.extras     ?? 0,
+        installTotal:      bd?.total      ?? 0,
+        installComplexity: bd?.complexity ?? 'Standard',
+        subtotal:          quote.subtotal,
+        total:             quote.total,
+      }),
+    })
+    // Show success immediately without waiting for email to send
+    setSent(true)
+  } catch {
+    setSendError('Something went wrong. Please try WhatsApp instead.')
+  } finally {
+    setSending(false)
   }
+}
 
   const openWhatsApp = (number) => {
     if (!validate(false)) return
@@ -152,15 +148,40 @@ export default function OrderForm({ product, onClose }) {
     )
   }
 
-  const sendBoth = async () => {
-    if (!validate(true)) return
-    await sendEmail()
-    window.open(
-      'https://wa.me/' + WHATSAPP_NUMBERS[0].number + '?text=' + encodeURIComponent(buildWAMessage()),
-      '_blank',
-      'noopener,noreferrer',
-    )
-  }
+  const sendBoth = () => {
+  if (!validate(true)) return
+  // Fire email in background
+  fetch('/api/quote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name:              form.name,
+      phone:             form.phone,
+      location:          form.location,
+      notes:             form.notes,
+      customerEmail:     form.email,
+      productName:       product.name,
+      productCode:       product.code,
+      productPrice:      product.price,
+      qty,
+      installation:      form.installation,
+      installBase:       bd?.base       ?? 0,
+      installExtra:      bd?.extra      ?? 0,
+      installExtras:     bd?.extras     ?? 0,
+      installTotal:      bd?.total      ?? 0,
+      installComplexity: bd?.complexity ?? 'Standard',
+      subtotal:          quote.subtotal,
+      total:             quote.total,
+    }),
+  })
+  // Open WhatsApp immediately
+  window.open(
+    'https://wa.me/' + WHATSAPP_NUMBERS[0].number + '?text=' + encodeURIComponent(buildWAMessage()),
+    '_blank',
+    'noopener,noreferrer',
+  )
+  setSent(true)
+}
 
   return (
     <div
